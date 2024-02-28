@@ -306,7 +306,7 @@ struct _search_resp *search(const wchar_t *str, int mode)
                 curr_len_hash = hashmap.head;
                 result = search_len_hash(keys, len, curr_len_hash, 0);
 
-                for (int i = 1; i < hashmap.len - len + 1; i++) {
+                for (int i = 1; i < hashmap.len - len + 2; i++) {
                         curr_len_hash = curr_len_hash->next;
                         result =
                             sum_search_resp(result, search_len_hash(keys, len, curr_len_hash, 0));

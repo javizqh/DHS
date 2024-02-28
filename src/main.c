@@ -25,7 +25,7 @@ int main()
         add_word(L"lobster");
         add_word(L"lobster");
         add_word(L"ジalsoa");
-        print_results(search(L"brar", SEARCH_INSIDE));
+        print_results(search(L"y", SEARCH_INSIDE));
         free_maps();
         return 0;
 }
