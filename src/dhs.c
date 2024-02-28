@@ -6,7 +6,8 @@
 struct _word_data {
         int type;
         int len;
-        wchar_t str[MAX_CHAR_HASH_SIZE];        // TODO: only temporary
+        // wchar_t str[MAX_CHAR_HASH_SIZE];        // TODO: only temporary
+        wchar_t *str;
         struct _word_data *next;
 };
 
@@ -31,7 +32,9 @@ struct _key_map {
 struct _inside_hash {
         int depth;
         int pos_map[MAX_CHAR_HASH_SIZE];
+        // int *pos_map;
         struct _inside_hash *inside_hash[MAX_CHAR_HASH_SIZE];
+        // struct _inside_hash **inside_hash;
 };
 
 struct _char_hash {
@@ -39,12 +42,15 @@ struct _char_hash {
         int has_single_value;   // For example if 'k' hash has the word "k"
         struct _inside_hash *inside_hash[MAX_CHAR_HASH_SIZE];
         struct _word_data *data[MAX_WORDS_IN_CHAR_HASH];        // TODO: temporary it should be dynamic
+        // struct _inside_hash **inside_hash;
+        // struct _word_data **data;
 };
 
 struct _len_hash {
         int index;
         struct _len_hash *next;
         struct _char_hash *char_hash[MAX_CHAR_HASH_SIZE];
+        // struct _char_hash **char_hash;
 };
 
 struct _hashmap {
@@ -139,6 +145,7 @@ void free_word_map()
         for (node = word_map.head; node;) {
                 free_node = node;
                 node = node->next;
+                free(free_node->str);
                 free(free_node);
         }
 
@@ -158,6 +165,7 @@ struct _word_data *new_word_data(const wchar_t *str)
 
         node->type = 1;
         node->len = wcslen(str);
+        node->str = malloc(node->len * (sizeof(*node->str)));
         wcscpy(node->str, str);
         node->next = NULL;
 
@@ -374,6 +382,7 @@ int add_word(const wchar_t *str)
         struct _word_data *word_data;
 
         word_data = new_word_data(str);
+        sizeof(*word_data);
 
         for (wchar_t *ptr = str; *ptr != '\0'; ptr++) {
                 keys[len++] = get_key_value(*ptr);
