@@ -193,10 +193,9 @@ void init_hashmap()
 void free_inside_hash(struct _inside_hash *to_free)
 {
         if (to_free->max_inside_hash > -1) {
-                for (size_t i = 0; i < to_free->max_inside_hash; i++) {
+                for (size_t i = 0; i < to_free->max_inside_hash + 1; i++) {
                         if (to_free->inside_hash[i] != NULL)
                                 free_inside_hash(to_free->inside_hash[i]);
-                        int a = sizeof(to_free->inside_hash[i]);
                 }
         }
         free(to_free->inside_hash);
@@ -206,7 +205,7 @@ void free_inside_hash(struct _inside_hash *to_free)
 
 void free_char_hash(struct _char_hash *to_free)
 {
-        for (size_t i = 0; i < to_free->max_inside_hash; i++) {
+        for (size_t i = 0; i < to_free->max_inside_hash + 1; i++) {
                 if (to_free->inside_hash[i] != NULL)
                         free_inside_hash(to_free->inside_hash[i]);
         }
@@ -267,14 +266,14 @@ int add_inside_hash(struct _char_hash *char_hash, int ind)
 {
         struct _inside_hash *node = new_inside_hash(0);
 
-        if (char_hash->max_inside_hash < 0) {
-                char_hash->max_inside_hash = 0;
-                char_hash->inside_hash = malloc(sizeof(struct _inside_hash *));
-        }
+        // Copy the old len_hash into the new one with one more space to malloc
+        struct _inside_hash **old_ins_hashes = char_hash->inside_hash;
 
         if (ind > char_hash->max_inside_hash) {
-                char_hash->inside_hash =
-                    reallocarray(char_hash->inside_hash, ind + 1, sizeof(struct _inside_hash *));
+                char_hash->inside_hash = calloc(ind + 1, sizeof(struct _inside_hash *));
+                memcpy(char_hash->inside_hash, old_ins_hashes,
+                       sizeof(*old_ins_hashes) * (char_hash->max_inside_hash + 1));
+                free(old_ins_hashes);
                 char_hash->max_inside_hash = ind;
         }
 
@@ -287,14 +286,14 @@ int add_inside_hash_r(struct _inside_hash *inside_hash, int ind)
 {
         struct _inside_hash *node = new_inside_hash(inside_hash->depth);
 
-        if (inside_hash->max_inside_hash < 0) {
-                inside_hash->max_inside_hash = 0;
-                inside_hash->inside_hash = malloc(sizeof(struct _inside_hash *));
-        }
+        // Copy the old len_hash into the new one with one more space to malloc
+        struct _inside_hash **old_ins_hashes = inside_hash->inside_hash;
 
         if (ind > inside_hash->max_inside_hash) {
-                inside_hash->inside_hash =
-                    reallocarray(inside_hash->inside_hash, ind + 1, sizeof(struct _inside_hash *));
+                inside_hash->inside_hash = calloc(ind + 1, sizeof(struct _inside_hash *));
+                memcpy(inside_hash->inside_hash, old_ins_hashes,
+                       sizeof(*old_ins_hashes) * (inside_hash->max_inside_hash + 1));
+                free(old_ins_hashes);
                 inside_hash->max_inside_hash = ind;
         }
 
@@ -333,12 +332,14 @@ int add_char_hash(struct _len_hash *len_hash, int ind)
 {
         struct _char_hash *node = new_char_hash();
 
-        if (len_hash->len == 0)
-                len_hash->char_hash = malloc(sizeof(struct _char_hash *));
+        // Copy the old len_hash into the new one with one more space to malloc
+        struct _char_hash **old_char_hashes = len_hash->char_hash;
 
         if (ind + 1 > len_hash->len) {
-                len_hash->char_hash =
-                    reallocarray(len_hash->char_hash, ind + 1, sizeof(struct _char_hash *));
+                len_hash->char_hash = calloc(ind + 1, sizeof(struct _char_hash *));
+                memcpy(len_hash->char_hash, old_char_hashes,
+                       sizeof(*old_char_hashes) * len_hash->len);
+                free(old_char_hashes);
                 len_hash->len = ind + 1;
         }
 
@@ -357,11 +358,14 @@ int insert_word(struct _char_hash *char_hash, struct _word_data *word)
                 in_keys[len++] = get_key_value(*ptr);
         }
 
-        if (char_hash->n_values++ == 0)
-                char_hash->data = malloc(sizeof(struct _word_data *));
-        else
-                char_hash->data =
-                    reallocarray(char_hash->data, char_hash->n_values, sizeof(*char_hash->data));
+        // Copy the old len_hash into the new one with one more space to malloc
+        struct _word_data **old_data = char_hash->data;
+
+        char_hash->n_values++;
+
+        char_hash->data = calloc(char_hash->n_values, sizeof(struct _word_data *));
+        memcpy(char_hash->data, old_data, sizeof(*old_data) * (char_hash->n_values - 1));
+        free(old_data);
 
         if (char_hash->n_values == 1) {
                 char_hash->data[0] = word;
