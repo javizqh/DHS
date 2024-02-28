@@ -21,8 +21,8 @@ struct _word_data {
 
 struct _search_resp_node {
         int match_pos[2];
-        struct _word_data data;
-        struct _search_resp *next;
+        struct _word_data *data;
+        struct _search_resp_node *next;
 };
 
 struct _search_resp {
@@ -30,7 +30,6 @@ struct _search_resp {
         struct _search_resp_node *head;
         struct _search_resp_node *tail;
 };
-
 
 struct _search_resp *search(const wchar_t *str, int mode);
 void free_search_results(struct _search_resp *search_results);

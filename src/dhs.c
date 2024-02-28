@@ -28,7 +28,7 @@ struct _inside_hash {
 struct _char_hash {
         int n_values;
         int max_inside_hash;
-        struct word * single_char;   // For example if 'k' hash has the word "k"
+        struct _word_data *single_char; // For example if 'k' hash has the word "k"
         struct _inside_hash **inside_hash;
         struct _word_data **data;
 };
@@ -49,160 +49,6 @@ struct _hashmap {
 struct _key_map key_map;
 struct _word_map word_map;
 struct _hashmap hashmap;
-
-void free_search_results(struct _search_resp *search_results) {
-        struct _search_resp_node *node;
-        struct _search_resp_node *free_node;
-
-        for (node = search_results->head; node;) {
-                free_node = node;
-                node = node->next;
-                free(free_node);
-        }
-
-        free(search_results);
-        return;
-}
-
-struct _search_resp_node * new_search_resp_node(struct _word_data *data, int start, int end) {
-        struct _search_resp_node *node;
-
-        node = malloc(sizeof(*node));
-        if (node == NULL)
-                err(EXIT_FAILURE, "malloc failed");
-        memset(node, 0, sizeof(*node));
-
-        node->match_pos[0] = start;
-        node->match_pos[1] = end;
-        node->next = NULL;
-
-        return node;
-}
-
-int add_search_resp_node(struct _search_resp *list, struct _word_data *data, int start, int end) {
-        struct _search_resp_node *node = new_search_resp_node(data, start, end);
-
-        if (list->head == NULL) {
-                list->head = node;
-                list->tail = node;
-        } else {
-                list->tail->next = node;
-                list->tail = node;
-        }
-
-        return list->len++;    
-}
-
-struct _search_resp *search_len_hash(int *keys, int len, struct _len_hash * len_hash, int exact_search) {
-        struct _char_hash *curr_char_hash = NULL;
-        struct _inside_hash *inside_hash = NULL;
-        struct _search_resp * result;
-
-        result = malloc(sizeof(*result));
-        if (result == NULL)
-                err(EXIT_FAILURE, "malloc failed");
-        memset(result, 0, sizeof(*result));
-
-        result->head = NULL;
-        result->tail = NULL;
-        result->len = 0;
-
-        if (len_hash->len > keys[0])
-                curr_char_hash = len_hash->char_hash[keys[0]];
-
-        if (curr_char_hash == NULL) 
-                goto out_free_result;
-
-        if (len_hash->index == 0 && len == 1 && curr_char_hash->single_char != NULL) {
-                add_search_resp_node(result, curr_char_hash->single_char, 0, 1);
-                return result;
-        }
-
-        if (keys[1] > curr_char_hash->max_inside_hash)
-                goto out_free_result;
-        else
-                inside_hash = curr_char_hash->inside_hash[keys[1]];
-
-        if (inside_hash == NULL)
-                goto out_free_result;
-
-        if (inside_hash->depth == len - 1) {
-                for (int k = inside_hash->pos_map[0]; k <= inside_hash->pos_map[1]; k++) {
-                        if (exact_search) {
-                                if (curr_char_hash->data[k]->len == len) {
-                                        add_search_resp_node(result, curr_char_hash->data[k], 0, len - 1);
-                                        return result;
-                                }
-                        } else {
-                                add_search_resp_node(result, curr_char_hash->data[k], 0, inside_hash->depth);
-                        }
-                }
-        }
-
-        for (int j = 2; j < len; j++) {
-                if (keys[j] > inside_hash->max_inside_hash)
-                        break;
-                else
-                        inside_hash = inside_hash->inside_hash[keys[j]];
-
-                if (inside_hash == NULL)
-                        break;
-
-                if (inside_hash->depth == len - 1) {
-                        for (int k = inside_hash->pos_map[0]; k <= inside_hash->pos_map[1]; k++) {
-                                if (exact_search) {
-                                        if (curr_char_hash->data[k]->len == len) {
-                                                add_search_resp_node(result, curr_char_hash->data[k], 0, len - 1);
-                                                return result;
-                                        }
-                                } else {
-                                        add_search_resp_node(result, curr_char_hash->data[k], 0, inside_hash->depth);
-                                }
-                        }
-                }
-        }
-
-        return result;
-
-out_free_result:
-        free(result);
-        return NULL;
-}
-
-struct _search_resp *search(const wchar_t *str, int mode) {
-        int keys[wcslen(str)];
-        int len = 0;
-        struct _len_hash *curr_len_hash = NULL;
-
-        for (wchar_t *ptr = str; *ptr != '\0'; ptr++) {
-                keys[len++] = get_key_value(*ptr);
-        }
-
-        if (hashmap.len < len)
-                return NULL;
-
-        if (len == 1)
-                mode = SEARCH_BEGGINING;
-
-        switch (mode)
-        {
-        case SEARCH_EXACT:
-                return search_len_hash(keys, len, hashmap.head, 1);
-                break;
-        case SEARCH_INSIDE:
-                curr_len_hash = hashmap.head;
-                search_len_hash(keys, len, curr_len_hash, 0);
-
-                for (int i = 1; i < hashmap.len - len; i++) {
-                        search_len_hash(keys, len, curr_len_hash, 0);
-                }
-                break;
-        case SEARCH_BEGGINING:
-                return search_len_hash(keys, len, hashmap.head, 0);
-        }
-
-        return NULL;
-}
 
 void init_key_map()
 {
@@ -269,6 +115,177 @@ int get_key_value(wchar_t chr)
         }
 
         return add_key_node(chr);
+}
+
+void free_search_results(struct _search_resp *search_results)
+{
+        struct _search_resp_node *node;
+        struct _search_resp_node *free_node;
+
+        for (node = search_results->head; node;) {
+                free_node = node;
+                node = node->next;
+                free(free_node);
+        }
+
+        free(search_results);
+        return;
+}
+
+struct _search_resp_node *new_search_resp_node(struct _word_data *data, int start, int end)
+{
+        struct _search_resp_node *node;
+
+        node = malloc(sizeof(*node));
+        if (node == NULL)
+                err(EXIT_FAILURE, "malloc failed");
+        memset(node, 0, sizeof(*node));
+
+        node->match_pos[0] = start;
+        node->match_pos[1] = end;
+        node->next = NULL;
+        node->data = data;
+
+        return node;
+}
+
+int add_search_resp_node(struct _search_resp *list, struct _word_data *data, int start, int end)
+{
+        struct _search_resp_node *node = new_search_resp_node(data, start, end);
+
+        if (list->head == NULL) {
+                list->head = node;
+                list->tail = node;
+        } else {
+                list->tail->next = node;
+                list->tail = node;
+        }
+
+        return list->len++;
+}
+
+struct _search_resp *search_len_hash(int *keys, int len, struct _len_hash *len_hash,
+                                     int exact_search)
+{
+        struct _char_hash *curr_char_hash = NULL;
+        struct _inside_hash *inside_hash = NULL;
+        struct _search_resp *result;
+
+        result = malloc(sizeof(*result));
+        if (result == NULL)
+                err(EXIT_FAILURE, "malloc failed");
+        memset(result, 0, sizeof(*result));
+
+        result->head = NULL;
+        result->tail = NULL;
+        result->len = 0;
+
+        if (len_hash->len > keys[0])
+                curr_char_hash = len_hash->char_hash[keys[0]];
+
+        if (curr_char_hash == NULL)
+                goto out_free_result;
+
+        if (len_hash->index == 0 && len == 1) {
+                if (curr_char_hash->single_char != NULL) {
+                        add_search_resp_node(result, curr_char_hash->single_char, 0, 1);
+                }
+                for (int i = 0; i < curr_char_hash->n_values; i++) {
+                        add_search_resp_node(result, curr_char_hash->data[i], 0, 1);
+                }
+                return result;
+        }
+
+        if (keys[1] > curr_char_hash->max_inside_hash)
+                goto out_free_result;
+        else
+                inside_hash = curr_char_hash->inside_hash[keys[1]];
+
+        if (inside_hash == NULL)
+                goto out_free_result;
+
+        if (inside_hash->depth == len - 1) {
+                for (int k = inside_hash->pos_map[0]; k <= inside_hash->pos_map[1]; k++) {
+                        if (exact_search) {
+                                if (curr_char_hash->data[k]->len == len) {
+                                        add_search_resp_node(result, curr_char_hash->data[k], 0,
+                                                             len - 1);
+                                        return result;
+                                }
+                        } else {
+                                add_search_resp_node(result, curr_char_hash->data[k], 0,
+                                                     inside_hash->depth);
+                        }
+                }
+        }
+
+        for (int j = 2; j < len; j++) {
+                if (keys[j] > inside_hash->max_inside_hash)
+                        break;
+                else
+                        inside_hash = inside_hash->inside_hash[keys[j]];
+
+                if (inside_hash == NULL)
+                        break;
+
+                if (inside_hash->depth == len - 1) {
+                        for (int k = inside_hash->pos_map[0]; k <= inside_hash->pos_map[1]; k++) {
+                                if (exact_search) {
+                                        if (curr_char_hash->data[k]->len == len) {
+                                                add_search_resp_node(result,
+                                                                     curr_char_hash->data[k], 0,
+                                                                     len - 1);
+                                                return result;
+                                        }
+                                } else {
+                                        add_search_resp_node(result, curr_char_hash->data[k], 0,
+                                                             inside_hash->depth);
+                                }
+                        }
+                }
+        }
+
+        if (result->len > 0)
+                return result;
+
+ out_free_result:
+        free(result);
+        return NULL;
+}
+
+struct _search_resp *search(const wchar_t *str, int mode)
+{
+        int keys[wcslen(str)];
+        int len = 0;
+        struct _len_hash *curr_len_hash = NULL;
+
+        for (wchar_t *ptr = str; *ptr != '\0'; ptr++) {
+                keys[len++] = get_key_value(*ptr);
+        }
+
+        if (hashmap.len < len - 1)
+                return NULL;
+
+        if (len == 1)
+                mode = SEARCH_BEGGINING;
+
+        switch (mode) {
+        case SEARCH_EXACT:
+                return search_len_hash(keys, len, hashmap.head, 1);
+                break;
+        case SEARCH_INSIDE:
+                curr_len_hash = hashmap.head;
+                search_len_hash(keys, len, curr_len_hash, 0);
+
+                for (int i = 1; i < hashmap.len - len; i++) {
+                        search_len_hash(keys, len, curr_len_hash, 0);
+                }
+                break;
+        case SEARCH_BEGGINING:
+                return search_len_hash(keys, len, hashmap.head, 0);
+        }
+
+        return NULL;
 }
 
 void init_word_map()
@@ -581,6 +598,7 @@ int add_word(const wchar_t *str)
         struct _char_hash *curr_char_hash = NULL;
         struct _inside_hash *curr_inside_hash = NULL;
         struct _word_data *word_data;
+        struct _search_resp *is_inside;
 
         word_data = new_word_data(str);
 
@@ -588,11 +606,12 @@ int add_word(const wchar_t *str)
                 keys[len++] = get_key_value(*ptr);
         }
 
-        // TODO: check if already inside
-        // if (inside) {
-        //         free(word_data);
-        //         return 1;
-        // }
+        is_inside = search(str, SEARCH_EXACT);
+        if (is_inside != NULL) {
+                free_search_results(is_inside);
+                free(word_data);
+                return 1;
+        }
 
         add_word_data(word_data);
 
