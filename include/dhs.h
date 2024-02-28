@@ -31,8 +31,7 @@ struct _search_resp {
         struct _search_resp_node *tail;
 };
 
+int load_from_file(const char *filename);
 struct _search_resp *search(const wchar_t *str, int mode);
 void free_search_results(struct _search_resp *search_results);
-void init_maps();
 void free_maps();
-int add_word(const wchar_t *str);

@@ -46,6 +46,7 @@ struct _hashmap {
         struct _len_hash *tail;
 };
 
+int are_maps_init = 0;
 struct _key_map key_map;
 struct _word_map word_map;
 struct _hashmap hashmap;
@@ -749,4 +750,34 @@ void free_maps()
         free_key_map();
         free_hashmap();
         free_word_map();
+}
+
+int load_from_file(const char *filename)
+{
+        FILE *fp;
+        size_t len = 0;
+        char *buff = NULL;
+        ssize_t readed = 0;
+
+        fp = fopen(filename, "r");
+        if (fp == NULL)
+                err(EXIT_FAILURE, "open failed");
+
+        if (!are_maps_init) {
+                init_maps();
+        }
+
+        while ((readed = getline(&buff, &len, fp)) != -1) {
+                if (readed == 0)
+                        continue;
+                wchar_t ws[readed];
+
+                buff[readed - 1] = '\0';
+                mbstowcs(ws, buff, readed);
+                add_word(ws);
+        }
+
+        free(buff);
+        fclose(fp);
+        return 0;
 }

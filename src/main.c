@@ -19,13 +19,8 @@ void print_results(struct _search_resp *search_results)
 int main()
 {
         // ジ
-        init_maps();
-        add_word(L"library");
-        add_word(L"libras");
-        add_word(L"lobster");
-        add_word(L"lobster");
-        add_word(L"ジalsoa");
-        print_results(search(L"y", SEARCH_INSIDE));
+        load_from_file("test/Words/es100.txt");
+        print_results(search(L"ol", SEARCH_INSIDE));
         free_maps();
         return 0;
 }
