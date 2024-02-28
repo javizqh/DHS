@@ -21,10 +21,11 @@ int main()
         // ジ
         init_maps();
         add_word(L"library");
+        add_word(L"libras");
         add_word(L"lobster");
         add_word(L"lobster");
         add_word(L"ジalsoa");
-        print_results(search(L"lobs", SEARCH_BEGGINING));
+        print_results(search(L"brar", SEARCH_INSIDE));
         free_maps();
         return 0;
 }

@@ -117,6 +117,35 @@ int get_key_value(wchar_t chr)
         return add_key_node(chr);
 }
 
+struct _search_resp *sum_search_resp(struct _search_resp *x, struct _search_resp *y)
+{
+        if (y == NULL)
+                return x;
+        if (y->len == 0) {
+                free(y);
+                return x;
+        }
+
+        if (x == NULL) {
+                x = malloc(sizeof(*x));
+                if (x == NULL)
+                        err(EXIT_FAILURE, "malloc failed");
+                memset(x, 0, sizeof(*x));
+        }
+
+        if (x->len == 0) {
+                x->head = y->head;
+                x->tail = y->tail;
+        } else {
+                x->tail->next = y->head;
+                x->tail = y->tail;
+        }
+
+        x->len += y->len;
+        free(y);
+        return x;
+}
+
 void free_search_results(struct _search_resp *search_results)
 {
         struct _search_resp_node *node;
@@ -258,6 +287,7 @@ struct _search_resp *search(const wchar_t *str, int mode)
         int keys[wcslen(str)];
         int len = 0;
         struct _len_hash *curr_len_hash = NULL;
+        struct _search_resp *result;
 
         for (wchar_t *ptr = str; *ptr != '\0'; ptr++) {
                 keys[len++] = get_key_value(*ptr);
@@ -272,15 +302,16 @@ struct _search_resp *search(const wchar_t *str, int mode)
         switch (mode) {
         case SEARCH_EXACT:
                 return search_len_hash(keys, len, hashmap.head, 1);
-                break;
         case SEARCH_INSIDE:
                 curr_len_hash = hashmap.head;
-                search_len_hash(keys, len, curr_len_hash, 0);
+                result = search_len_hash(keys, len, curr_len_hash, 0);
 
-                for (int i = 1; i < hashmap.len - len; i++) {
-                        search_len_hash(keys, len, curr_len_hash, 0);
+                for (int i = 1; i < hashmap.len - len + 1; i++) {
+                        curr_len_hash = curr_len_hash->next;
+                        result =
+                            sum_search_resp(result, search_len_hash(keys, len, curr_len_hash, 0));
                 }
-                break;
+                return result;
         case SEARCH_BEGGINING:
                 return search_len_hash(keys, len, hashmap.head, 0);
         }
@@ -609,6 +640,7 @@ int add_word(const wchar_t *str)
         is_inside = search(str, SEARCH_EXACT);
         if (is_inside != NULL) {
                 free_search_results(is_inside);
+                free(word_data->str);
                 free(word_data);
                 return 1;
         }
