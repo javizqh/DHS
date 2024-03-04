@@ -44,3 +44,6 @@ Doxyfile
 
 # Residual files
 terminalSize.txt
+
+# Big test files
+test/Words/**

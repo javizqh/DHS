@@ -218,10 +218,10 @@ struct _search_resp *search_len_hash(int *keys, int len, struct _len_hash *len_h
 
         if (len_hash->index == 0 && len == 1) {
                 if (curr_char_hash->single_char != NULL) {
-                        add_search_resp_node(result, curr_char_hash->single_char, 0, 1);
+                        add_search_resp_node(result, curr_char_hash->single_char, 0, 0);
                 }
                 for (int i = 0; i < curr_char_hash->n_values; i++) {
-                        add_search_resp_node(result, curr_char_hash->data[i], 0, 1);
+                        add_search_resp_node(result, curr_char_hash->data[i], 0, 0);
                 }
                 return result;
         }
@@ -243,8 +243,9 @@ struct _search_resp *search_len_hash(int *keys, int len, struct _len_hash *len_h
                                         return result;
                                 }
                         } else {
-                                add_search_resp_node(result, curr_char_hash->data[k], 0,
-                                                     inside_hash->depth);
+                                add_search_resp_node(result, curr_char_hash->data[k],
+                                                     len_hash->index,
+                                                     len_hash->index + inside_hash->depth);
                         }
                 }
         }
@@ -268,8 +269,9 @@ struct _search_resp *search_len_hash(int *keys, int len, struct _len_hash *len_h
                                                 return result;
                                         }
                                 } else {
-                                        add_search_resp_node(result, curr_char_hash->data[k], 0,
-                                                             inside_hash->depth);
+                                        add_search_resp_node(result, curr_char_hash->data[k],
+                                                             len_hash->index,
+                                                             len_hash->index + inside_hash->depth);
                                 }
                         }
                 }
@@ -494,10 +496,10 @@ int add_inside_hash_r(struct _inside_hash *inside_hash, int ind)
 
 int update_inside_pos_map(struct _inside_hash *inside_hash, int pos)
 {
-        if (inside_hash->pos_map[0] > 0) {
+        if (inside_hash->pos_map[0] > -1) {
                 inside_hash->pos_map[0]++;
                 inside_hash->pos_map[1]++;
-                for (int i = 0; i < inside_hash->max_inside_hash; i++) {
+                for (int i = 0; i < inside_hash->max_inside_hash + 1; i++) {
                         if (inside_hash->inside_hash[i] != NULL)
                                 update_inside_pos_map(inside_hash->inside_hash[i], pos);
                 }
@@ -543,14 +545,17 @@ int add_char_hash(struct _len_hash *len_hash, int ind)
         return 0;
 }
 
-int insert_word(struct _char_hash *char_hash, struct _word_data *word)
+int insert_word(struct _char_hash *char_hash, struct _word_data *word, int start_index)
 {
         int i = 0;
         int len = 0;
-        int in_keys[word->len];
+        int in_len = 0;
+        int min_len = 0;
+        int in_keys[word->len - start_index];
 
         for (wchar_t *ptr = word->str; *ptr != '\0'; ptr++) {
-                in_keys[len++] = get_key_value(*ptr);
+                if (in_len++ >= start_index)
+                        in_keys[in_len - start_index - 1] = get_key_value(*ptr);
         }
 
         // Copy the old len_hash into the new one with one more space to malloc
@@ -559,7 +564,7 @@ int insert_word(struct _char_hash *char_hash, struct _word_data *word)
         char_hash->n_values++;
 
         char_hash->data = calloc(char_hash->n_values, sizeof(struct _word_data *));
-        memcpy(char_hash->data, old_data, sizeof(*old_data) * (char_hash->n_values - 1));
+        memcpy(char_hash->data, old_data, sizeof(struct _word_data *) * (char_hash->n_values - 1));
         free(old_data);
 
         if (char_hash->n_values == 1) {
@@ -571,16 +576,30 @@ int insert_word(struct _char_hash *char_hash, struct _word_data *word)
                 int keys[char_hash->data[i]->len];
 
                 len = 0;
+                min_len = 0;
+
                 for (wchar_t *ptr = char_hash->data[i]->str; *ptr != '\0'; ptr++) {
-                        keys[len++] = get_key_value(*ptr);
+                        if (len++ >= start_index)
+                                keys[len - start_index - 1] = get_key_value(*ptr);
                 }
-                for (int j = 1; i < len; j++) {
+
+                min_len = (in_len > len) ? len : in_len;
+
+                for (int j = 1; j < min_len - start_index; j++) {
                         if (keys[j] > in_keys[j])
-                                break;
+                                goto out_for_loop;
+                        else if (keys[j] < in_keys[j])
+                                goto out_inside_loop;
                 }
+                if (in_len < len)
+                        goto out_for_loop;
+
+ out_inside_loop:
         }
 
-        for (int j = char_hash->n_values; j > i + 1; j--) {
+ out_for_loop:
+
+        for (int j = char_hash->n_values - 1; j > i; j--) {
                 char_hash->data[j] = char_hash->data[j - 1];
         }
 
@@ -628,7 +647,7 @@ int add_word(const wchar_t *str)
         int inserted_index = 0;
         struct _len_hash *curr_len_hash = NULL;
         struct _char_hash *curr_char_hash = NULL;
-        struct _inside_hash *curr_inside_hash = NULL;
+        struct _inside_hash *curr_inside_hash = NULL, *prev_inside_hash = NULL;
         struct _word_data *word_data;
         struct _search_resp *is_inside;
 
@@ -678,10 +697,12 @@ int add_word(const wchar_t *str)
                         break;
                 }
 
-                inserted_index = insert_word(curr_char_hash, word_data);
+                inserted_index = insert_word(curr_char_hash, word_data, i);
 
                 for (int j = i + 1; j < len; j++) {
                         if (j > i + 1) {
+                                prev_inside_hash = curr_inside_hash;
+
                                 if (keys[j] > curr_inside_hash->max_inside_hash
                                     || curr_inside_hash->max_inside_hash < 0) {
                                         add_inside_hash_r(curr_inside_hash, keys[j]);
@@ -700,12 +721,21 @@ int add_word(const wchar_t *str)
                                         curr_inside_hash->pos_map[1]++;
                                 }
 
-                                // Iterate for all inside_hashes[keys[j to max_inside_hashes]]
-                                for (int k = keys[j] + 1; k < curr_inside_hash->max_inside_hash;
-                                     k++) {
-                                        if (curr_inside_hash->inside_hash[k] != NULL)
-                                                update_inside_pos_map(curr_inside_hash->inside_hash
-                                                                      [k], inserted_index);
+                                for (int k = keys[j] + 1;
+                                     k < prev_inside_hash->max_inside_hash + 1; k++) {
+                                        if (prev_inside_hash->inside_hash[k] != NULL)
+                                                update_inside_pos_map
+                                                    (prev_inside_hash->inside_hash[k],
+                                                     inserted_index);
+                                }
+                                if (j + 1 == len) {
+                                        for (int k = 0; k < curr_inside_hash->max_inside_hash + 1;
+                                             k++) {
+                                                if (curr_inside_hash->inside_hash[k] != NULL)
+                                                        update_inside_pos_map
+                                                            (curr_inside_hash->inside_hash[k],
+                                                             inserted_index);
+                                        }
                                 }
                         } else {
                                 if (keys[j] > curr_char_hash->max_inside_hash
@@ -726,11 +756,20 @@ int add_word(const wchar_t *str)
                                         curr_inside_hash->pos_map[1]++;
                                 }
 
-                                // Iterate for all inside_hashes[keys[j to max_inside_hashes]]
-                                for (int k = keys[j] + 1; k < curr_char_hash->max_inside_hash; k++) {
+                                for (int k = keys[j] + 1; k < curr_char_hash->max_inside_hash + 1;
+                                     k++) {
                                         if (curr_char_hash->inside_hash[k] != NULL)
                                                 update_inside_pos_map(curr_char_hash->inside_hash
                                                                       [k], inserted_index);
+                                }
+                                if (j + 1 == len) {
+                                        for (int k = 0;
+                                             k < curr_inside_hash->max_inside_hash + 1; k++) {
+                                                if (curr_inside_hash->inside_hash[k] != NULL)
+                                                        update_inside_pos_map
+                                                            (curr_inside_hash->inside_hash[k],
+                                                             inserted_index);
+                                        }
                                 }
                         }
                 }
