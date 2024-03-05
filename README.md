@@ -1,9 +1,9 @@
-# Double Hash Search
+# Dynamic Double Hash Search
 
-## Static vs. Dynamic
-- 950 kB vs. 33 kB
+## Memory Usage
 
-Bug [0] holola􋆵
+- 10.000 words = 7 Mb of memory
+- 100.000 words = 100 Mb of memory
 
 ## Search time
 

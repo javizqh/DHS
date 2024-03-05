@@ -657,6 +657,10 @@ int add_word(const wchar_t *str)
                 keys[len++] = get_key_value(*ptr);
         }
 
+        if (hashmap.len == 0)
+                add_len_hash(hashmap.len);
+        curr_len_hash = hashmap.head;
+
         is_inside = search(str, SEARCH_EXACT);
         if (is_inside != NULL) {
                 free_search_results(is_inside);
@@ -666,10 +670,6 @@ int add_word(const wchar_t *str)
         }
 
         add_word_data(word_data);
-
-        if (hashmap.len == 0)
-                add_len_hash(hashmap.len);
-        curr_len_hash = hashmap.head;
 
         for (int i = 0; i < len; i++) {
                 if (len > 1 && len - i == 1)

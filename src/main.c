@@ -38,15 +38,20 @@ long get_nanoseconds(struct timespec start, struct timespec end)
 int main()
 {
         struct timespec begin, end;
+        struct _search_resp *search_results;
 
         // ジ
-        load_from_file("test/Words/es10000.txt");
+        load_from_file("test/Words/es.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
-        struct _search_resp *search_results = search(L"aron", SEARCH_INSIDE);
-
+        search_results = search(L"aron", SEARCH_INSIDE);
         clock_gettime(CLOCK_MONOTONIC, &end);
+        printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
+        print_results(search_results);
 
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        search_results = search(L"a", SEARCH_INSIDE);
+        clock_gettime(CLOCK_MONOTONIC, &end);
         printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
         print_results(search_results);
         free_maps();
