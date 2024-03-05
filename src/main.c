@@ -42,8 +42,7 @@ int main()
         struct timespec begin, end;
         struct _search_resp *search_results;
 
-        // ジ
-        load_from_file("test/Words/all/all100.txt");
+        load_from_file("test/Words/all/all10000.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
         search_results = search(L"low", SEARCH_INSIDE);
@@ -58,7 +57,7 @@ int main()
         print_results(search_results);
         free_maps();
 
-        load_from_file_fz("test/Words/all/all100.txt");
+        load_from_file_fz("test/Words/all/all10000.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
         search_results = search_fz(L"low", SEARCH_INSIDE);
@@ -73,7 +72,7 @@ int main()
         print_results(search_results);
         free_words_fz();
 
-        load_from_file_stdc("test/Words/all/all100.txt");
+        load_from_file_stdc("test/Words/all/all10000.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
         search_results = search_stdc(L"low", SEARCH_INSIDE);

@@ -57,7 +57,7 @@ struct _search_resp *search_len_hash_fz(const wchar_t *str, int len, int exact_s
         result->len = 0;
 
         for (struct _word_data * node = word_map_fz.head; node; node = node->next) {
-                for (int i = 0; i < node->len - len; i++) {
+                for (int i = 0; i < node->len - len + 1; i++) {
                         if (exact_search && node->len != len)
                                 continue;
                         if (begin && i > 0)
