@@ -1,4 +1,5 @@
 #include "dhs.h"
+#include "fuzzy_search.h"
 #include <time.h>
 
 #define SECTONANO   1000000000
@@ -41,16 +42,16 @@ int main()
         struct _search_resp *search_results;
 
         // ジ
-        load_from_file("test/Words/es.txt");
+        load_from_file("test/Words/all/all10000.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
-        search_results = search(L"aron", SEARCH_INSIDE);
+        search_results = search(L"ラン", SEARCH_INSIDE);
         clock_gettime(CLOCK_MONOTONIC, &end);
         printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
         print_results(search_results);
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
-        search_results = search(L"a", SEARCH_INSIDE);
+        search_results = search(L"人", SEARCH_INSIDE);
         clock_gettime(CLOCK_MONOTONIC, &end);
         printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
         print_results(search_results);
