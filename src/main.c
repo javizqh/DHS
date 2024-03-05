@@ -1,5 +1,6 @@
 #include "dhs.h"
 #include "fuzzy_search.h"
+#include "standard_c_search.h"
 #include <time.h>
 
 #define SECTONANO   1000000000
@@ -42,19 +43,49 @@ int main()
         struct _search_resp *search_results;
 
         // ジ
-        load_from_file("test/Words/all/all10000.txt");
+        load_from_file("test/Words/all/all100.txt");
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
-        search_results = search(L"ラン", SEARCH_INSIDE);
+        search_results = search(L"low", SEARCH_INSIDE);
         clock_gettime(CLOCK_MONOTONIC, &end);
         printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
         print_results(search_results);
 
         clock_gettime(CLOCK_MONOTONIC, &begin);
-        search_results = search(L"人", SEARCH_INSIDE);
+        search_results = search(L"a", SEARCH_INSIDE);
         clock_gettime(CLOCK_MONOTONIC, &end);
         printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
         print_results(search_results);
         free_maps();
+
+        load_from_file_fz("test/Words/all/all100.txt");
+
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        search_results = search_fz(L"low", SEARCH_INSIDE);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
+        print_results(search_results);
+
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        search_results = search_fz(L"a", SEARCH_INSIDE);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
+        print_results(search_results);
+        free_words_fz();
+
+        load_from_file_stdc("test/Words/all/all100.txt");
+
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        search_results = search_stdc(L"low", SEARCH_INSIDE);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
+        print_results(search_results);
+
+        clock_gettime(CLOCK_MONOTONIC, &begin);
+        search_results = search_stdc(L"a", SEARCH_INSIDE);
+        clock_gettime(CLOCK_MONOTONIC, &end);
+        printf("Latency: %ld ns\n", get_nanoseconds(begin, end));
+        print_results(search_results);
+        free_words_stdc();
         return 0;
 }
